@@ -2,6 +2,9 @@ package dev.olhovarch.extragenerators;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.network.Connection;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
@@ -30,16 +33,53 @@ public final class GeneratorBlockEntity extends BlockEntity {
     private final EnergyStorage energy;
     private final ItemStackHandler inventory=new ItemStackHandler(1){@Override protected void onContentsChanged(int slot){setChanged();}};
     private int burnRemaining, burnEnergy;
+    private boolean running;
+    private float rotationSpeed;
+    private float lastRotation;
+    private float rotation;
     public GeneratorBlockEntity(BlockPos pos, BlockState state){super(GeneratorRegistries.GENERATOR_BE.get(),pos,state);int[] t=tier();energy=new EnergyStorage(t[0],t[1],t[1]);}
     private String id(){return BuiltInRegistries.BLOCK.getKey(getBlockState().getBlock()).getPath();}
     private int[] tier(){return TIERS[TIER.getOrDefault(id(),1)];}
     public static void serverTick(Level level,BlockPos pos,BlockState state,GeneratorBlockEntity e){
-        if(level.isClientSide)return;String id=e.id();int rate=e.tier()[1];
-        if(id.equals("heavenly_generator")||id.equals("infernal_generator"))e.energy.receiveEnergy(Math.min(rate,102400),false);
-        else if(id.equals("thermoelectric_generator"))e.energy.receiveEnergy(Math.min(rate,e.heatDelta(level)),false);
-        else {if(e.burnRemaining<=0)e.startFuel(id);if(e.burnRemaining>0&&e.energy.getEnergyStored()+e.burnEnergy<=e.energy.getMaxEnergyStored()){e.energy.receiveEnergy(e.burnEnergy,false);e.burnRemaining--;}}
+        if(level.isClientSide)return;
+        String id=e.id();int rate=e.tier()[1];
+        int generated=0;
+        if(id.equals("heavenly_generator")||id.equals("infernal_generator")) {
+            generated=e.energy.receiveEnergy(Math.min(rate,102400),false);
+        } else if(id.equals("thermoelectric_generator")) {
+            generated=e.energy.receiveEnergy(Math.min(rate,e.heatDelta(level)),false);
+        } else {
+            if(e.burnRemaining<=0)e.startFuel(id);
+            if(e.burnRemaining>0&&e.energy.getEnergyStored()+e.burnEnergy<=e.energy.getMaxEnergyStored()){
+                generated=e.energy.receiveEnergy(e.burnEnergy,false);
+                if(generated>0)e.burnRemaining--;
+            }
+        }
+        boolean active=generated>0;
+        float speed=active ? (id.equals("heavenly_generator")||id.equals("infernal_generator") ? 10240.0f : generated/10.0f) : 0.0f;
+        e.setAnimationState(active,speed);
         e.pushEnergy();e.setChanged();
     }
+
+    public static void clientTick(Level level,BlockPos pos,BlockState state,GeneratorBlockEntity e){
+        if(!level.isClientSide || !e.running)return;
+        e.lastRotation=e.rotation;
+        e.rotation=(e.rotation+e.rotationSpeed)%360.0f;
+        level.addParticle(ParticleTypes.SMOKE, pos.getX()+0.5D, pos.getY()+0.825D, pos.getZ()+0.5D, 0.0D, 0.1D, 0.0D);
+    }
+
+    private void setAnimationState(boolean active,float speed){
+        if(running!=active || Float.compare(rotationSpeed,speed)!=0){
+            running=active;rotationSpeed=speed;
+            if(level!=null)level.sendBlockUpdated(worldPosition,getBlockState(),getBlockState(),3);
+            setChanged();
+        }
+    }
+
+    public boolean isRunning(){return running;}
+    public float getInterpolatedRotation(float partialTick){return lastRotation+(rotation-lastRotation)*partialTick;}
+    public float getRotationSpeed(){return rotationSpeed;}
+
     private void startFuel(String id){
         ItemStack s=inventory.getStackInSlot(0); if(s.isEmpty()) return;
         String item=BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
@@ -92,6 +132,24 @@ public final class GeneratorBlockEntity extends BlockEntity {
     private void pushEnergy(){if(level==null)return;for(Direction d:Direction.values()){var target=level.getCapability(Capabilities.EnergyStorage.BLOCK,worldPosition.relative(d),d.getOpposite());if(target!=null&&target.canReceive()&&energy.getEnergyStored()>0){int moved=target.receiveEnergy(Math.min(energy.getEnergyStored(),tier()[1]),false);energy.extractEnergy(moved,false);}}}
     public EnergyStorage getEnergyStorage(){return energy;}
     public ItemStackHandler getInventory(){return inventory;}
-    @Override protected void saveAdditional(CompoundTag tag,net.minecraft.core.HolderLookup.Provider registries){super.saveAdditional(tag,registries);tag.put("energy",energy.serializeNBT(registries));tag.put("inventory",inventory.serializeNBT(registries));tag.putInt("burnRemaining",burnRemaining);tag.putInt("burnEnergy",burnEnergy);}
-    @Override protected void loadAdditional(CompoundTag tag,net.minecraft.core.HolderLookup.Provider registries){super.loadAdditional(tag,registries);if(tag.contains("energy"))energy.deserializeNBT(registries,tag.get("energy"));if(tag.contains("inventory"))inventory.deserializeNBT(registries,tag.getCompound("inventory"));burnRemaining=tag.getInt("burnRemaining");burnEnergy=tag.getInt("burnEnergy");}
+    @Override public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries){
+        CompoundTag tag=super.getUpdateTag(registries);
+        tag.putBoolean("running",running);tag.putFloat("rotationSpeed",rotationSpeed);
+        tag.putFloat("rotation",rotation);tag.putFloat("lastRotation",lastRotation);
+        return tag;
+    }
+    @Override public void handleUpdateTag(CompoundTag tag,net.minecraft.core.HolderLookup.Provider registries){
+        super.handleUpdateTag(tag,registries);
+        running=tag.getBoolean("running");rotationSpeed=tag.getFloat("rotationSpeed");
+        rotation=tag.getFloat("rotation");lastRotation=tag.getFloat("lastRotation");
+    }
+    @Override public ClientboundBlockEntityDataPacket getUpdatePacket(){return ClientboundBlockEntityDataPacket.create(this);}
+    @Override public void onDataPacket(Connection net,ClientboundBlockEntityDataPacket pkt,net.minecraft.core.HolderLookup.Provider registries){
+        if(pkt.getTag()!=null)handleUpdateTag(pkt.getTag(),registries);
+    }
+
+    @Override protected void saveAdditional(CompoundTag tag,net.minecraft.core.HolderLookup.Provider registries){super.saveAdditional(tag,registries);tag.put("energy",energy.serializeNBT(registries));tag.put("inventory",inventory.serializeNBT(registries));tag.putInt("burnRemaining",burnRemaining);tag.putInt("burnEnergy",burnEnergy);
+        tag.putBoolean("running",running);tag.putFloat("rotationSpeed",rotationSpeed);tag.putFloat("rotation",rotation);tag.putFloat("lastRotation",lastRotation);}
+    @Override protected void loadAdditional(CompoundTag tag,net.minecraft.core.HolderLookup.Provider registries){super.loadAdditional(tag,registries);if(tag.contains("energy"))energy.deserializeNBT(registries,tag.get("energy"));if(tag.contains("inventory"))inventory.deserializeNBT(registries,tag.getCompound("inventory"));burnRemaining=tag.getInt("burnRemaining");burnEnergy=tag.getInt("burnEnergy");
+        running=tag.getBoolean("running");rotationSpeed=tag.getFloat("rotationSpeed");rotation=tag.getFloat("rotation");lastRotation=tag.getFloat("lastRotation");}
 }

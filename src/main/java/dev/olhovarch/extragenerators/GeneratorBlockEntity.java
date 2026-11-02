@@ -64,7 +64,8 @@ public final class GeneratorBlockEntity extends BlockEntity {
     public static void clientTick(Level level,BlockPos pos,BlockState state,GeneratorBlockEntity e){
         if(!level.isClientSide || !e.running)return;
         e.lastRotation=e.rotation;
-        e.rotation=(e.rotation+e.rotationSpeed)%360.0f;
+        e.rotation+=e.rotationSpeed;
+        if(e.rotation>=360.0f){e.rotation%=360.0f;e.lastRotation-=360.0f;}
         level.addParticle(ParticleTypes.SMOKE, pos.getX()+0.5D, pos.getY()+0.825D, pos.getZ()+0.5D, 0.0D, 0.1D, 0.0D);
     }
 

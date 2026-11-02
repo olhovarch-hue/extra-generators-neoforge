@@ -11,13 +11,17 @@ import org.slf4j.Logger;
 public final class ExtraGenerators {
     public static final String MOD_ID = "extragenerators";
     public static final Logger LOGGER = LogUtils.getLogger();
+
     public ExtraGenerators(IEventBus modBus) {
         GeneratorRegistries.register(modBus);
         modBus.addListener(this::registerCapabilities);
         LOGGER.info("Extra Generators NeoForge port bootstrap loaded.");
     }
+
     private void registerCapabilities(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, GeneratorRegistries.GENERATOR_BE.get(),
                 (blockEntity, side) -> blockEntity.getEnergyStorage());
+        event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, GeneratorRegistries.GENERATOR_BE.get(),
+                (blockEntity, side) -> blockEntity.getInventory());
     }
 }

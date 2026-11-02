@@ -30,7 +30,7 @@ public final class GeneratorBlockEntity extends BlockEntity {
     private final EnergyStorage energy;
     private final ItemStackHandler inventory=new ItemStackHandler(1){@Override protected void onContentsChanged(int slot){setChanged();}};
     private int burnRemaining, burnEnergy;
-    public GeneratorBlockEntity(BlockPos pos, BlockState state){super(GeneratorRegistries.GENERATOR_BE.get(),pos,state);int[] t=tier();energy=new EnergyStorage(t[0],0,t[1]);}
+    public GeneratorBlockEntity(BlockPos pos, BlockState state){super(GeneratorRegistries.GENERATOR_BE.get(),pos,state);int[] t=tier();energy=new EnergyStorage(t[0],t[1],t[1]);}
     private String id(){return BuiltInRegistries.BLOCK.getKey(getBlockState().getBlock()).getPath();}
     private int[] tier(){return TIERS[TIER.getOrDefault(id(),1)];}
     public static void serverTick(Level level,BlockPos pos,BlockState state,GeneratorBlockEntity e){

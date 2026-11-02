@@ -36,31 +36,53 @@ public final class GeneratorBlockEntity extends BlockEntity {
     public static void serverTick(Level level,BlockPos pos,BlockState state,GeneratorBlockEntity e){
         if(level.isClientSide)return;String id=e.id();int rate=e.tier()[1];
         if(id.equals("heavenly_generator")||id.equals("infernal_generator"))e.energy.receiveEnergy(rate,false);
-        else if(id.equals("thermoelectric_generator"))e.energy.receiveEnergy(Math.min(rate,e.heatDelta(level)/10),false);
+        else if(id.equals("thermoelectric_generator"))e.energy.receiveEnergy(Math.min(rate,e.heatDelta(level)),false);
         else {if(e.burnRemaining<=0)e.startFuel(id);if(e.burnRemaining>0&&e.energy.getEnergyStored()+e.burnEnergy<=e.energy.getMaxEnergyStored()){e.energy.receiveEnergy(e.burnEnergy,false);e.burnRemaining--;}}
         e.pushEnergy();e.setChanged();
     }
     private void startFuel(String id){
-        ItemStack s=inventory.getStackInSlot(0);if(s.isEmpty())return;
-        String item=BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();int duration=0;
-        if(id.equals("burnable_generator"))duration=s.getBurnTime(RecipeType.SMELTING);
-        else if(id.equals("icy_generator"))duration=switch(item){case "ice"->40;case "packed_ice"->360;case "blue_ice"->3240;case "snowball"->5;case "snow_block"->20;case "snow"->10;default->0;};
-        else if(id.equals("sludgy_generator"))duration=switch(item){case "slime_ball"->200;case "slime_block"->1800;default->0;};
-        else if(id.equals("teleport_generator"))duration=switch(item){case "ender_pearl"->800;case "ender_eye"->1000;case "chorus_fruit"->20;default->0;};
-        else if(id.equals("blast_generator"))duration=switch(item){case "gunpowder"->100;case "tnt"->600;default->0;};
-        else if(id.equals("colorful_generator"))duration=DYES.contains(item)?40:0;
-        else if(id.equals("gluttony_generator"))duration=FOODS.contains(item)?100:0;
-        else if(id.equals("brew_generator"))duration=(s.is(Items.POTION)||s.is(Items.SPLASH_POTION)||s.is(Items.LINGERING_POTION))?200:0;
-        else if(id.equals("demise_generator"))duration=switch(item){case "rotten_flesh","bone"->10;case "spider_eye"->20;case "bone_block"->90;case "zombie_head","creeper_head","skeleton_skull"->1800;default->0;};
-        else if(id.equals("dragon_generator"))duration=switch(item){case "dragon_breath"->20;case "dragon_head"->2000;case "dragon_egg"->24000;default->0;};
-        else if(id.equals("withered_generator"))duration=switch(item){case "nether_star"->6000;case "wither_skeleton_skull"->450;case "wither_rose"->20;default->0;};
-        else if(id.equals("steam_generator")&&s.is(Items.WATER_BUCKET))duration=100;
-        else if((id.equals("scalding_generator")||id.equals("redstone_generator"))&&s.is(Items.LAVA_BUCKET))duration=100;
-        if(duration<=0)return;burnRemaining=duration;burnEnergy=tier()[1];s.shrink(1);
-        if(s.isEmpty()&&(item.equals("water_bucket")||item.equals("lava_bucket")))inventory.setStackInSlot(0,new ItemStack(Items.BUCKET));
+        ItemStack s=inventory.getStackInSlot(0); if(s.isEmpty()) return;
+        String item=BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+        int duration=0, perTick=0;
+        if(id.equals("burnable_generator")) {
+            int ticks=s.getBurnTime(RecipeType.SMELTING);
+            duration=Math.max(1,Math.round(ticks/4.0f)); perTick=32;
+        } else if(id.equals("icy_generator")) {
+            duration=switch(item){case "ice"->40;case "packed_ice"->360;case "blue_ice"->3240;case "snowball"->5;case "snow_block"->20;case "snow"->10;default->0;}; perTick=32;
+        } else if(id.equals("sludgy_generator")) {
+            duration=switch(item){case "slime_ball"->200;case "slime_block"->1800;default->0;}; perTick=64;
+        } else if(id.equals("teleport_generator")) {
+            duration=switch(item){case "ender_pearl"->800;case "ender_eye"->1000;case "chorus_fruit"->20;default->0;}; perTick=64;
+        } else if(id.equals("blast_generator")) {
+            duration=switch(item){case "gunpowder"->100;case "tnt"->600;default->0;}; perTick=128;
+        } else if(id.equals("demise_generator")) {
+            duration=switch(item){case "rotten_flesh","bone"->10;case "spider_eye"->20;case "bone_block"->90;case "zombie_head","creeper_head","skeleton_skull"->1800;case "wither_skeleton_skull"->3600;default->0;}; perTick=256;
+        } else if(id.equals("dragon_generator")) {
+            duration=switch(item){case "dragon_breath"->20;case "dragon_head"->2000;case "dragon_egg"->24000;default->0;}; perTick=2034;
+        } else if(id.equals("withered_generator")) {
+            duration=switch(item){case "nether_star"->6000;case "wither_skeleton_skull"->450;case "wither_rose"->20;default->0;}; perTick=2048;
+        } else if(id.equals("colorful_generator")) {
+            duration=DYES.contains(item)?40:0; perTick=16;
+        } else if(id.equals("gluttony_generator")) {
+            duration=FOODS.contains(item)?100:0; perTick=64;
+        } else if(id.equals("brew_generator")) {
+            duration=(s.is(Items.POTION)||s.is(Items.SPLASH_POTION)||s.is(Items.LINGERING_POTION))?200:0; perTick=8;
+        } else if(id.equals("steam_generator")&&s.is(Items.WATER_BUCKET)) {
+            duration=100; perTick=64;
+        } else if((id.equals("scalding_generator")||id.equals("redstone_generator"))&&s.is(Items.LAVA_BUCKET)) {
+            duration=100; perTick=id.equals("scalding_generator")?64:128;
+        }
+        if(duration<=0||perTick<=0) return;
+        burnRemaining=duration; burnEnergy=perTick; s.shrink(1);
+        if(s.isEmpty()&&(item.equals("water_bucket")||item.equals("lava_bucket"))) inventory.setStackInSlot(0,new ItemStack(Items.BUCKET));
         setChanged();
     }
-    private int heatDelta(Level l){return Math.abs(temp(l.getBlockState(worldPosition.above()).getBlock())-temp(l.getBlockState(worldPosition.below()).getBlock()));}
+    private int heatDelta(Level l){
+        int x=Math.abs(temp(l.getBlockState(worldPosition.east()).getBlock())-temp(l.getBlockState(worldPosition.west()).getBlock()));
+        int y=Math.abs(temp(l.getBlockState(worldPosition.above()).getBlock())-temp(l.getBlockState(worldPosition.below()).getBlock()));
+        int z=Math.abs(temp(l.getBlockState(worldPosition.north()).getBlock())-temp(l.getBlockState(worldPosition.south()).getBlock()));
+        return (x+y+z)/100;
+    }
     private int temp(net.minecraft.world.level.block.Block b){
         if(b==Blocks.LAVA)return 1200;
         if(b==Blocks.MAGMA_BLOCK||b==Blocks.SOUL_FIRE||b==Blocks.SOUL_CAMPFIRE||b==Blocks.SOUL_TORCH||b==Blocks.SOUL_WALL_TORCH)return 600;

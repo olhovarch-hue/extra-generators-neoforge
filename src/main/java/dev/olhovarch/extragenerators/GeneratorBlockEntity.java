@@ -35,7 +35,7 @@ public final class GeneratorBlockEntity extends BlockEntity {
     private int[] tier(){return TIERS[TIER.getOrDefault(id(),1)];}
     public static void serverTick(Level level,BlockPos pos,BlockState state,GeneratorBlockEntity e){
         if(level.isClientSide)return;String id=e.id();int rate=e.tier()[1];
-        if(id.equals("heavenly_generator")||id.equals("infernal_generator"))e.energy.receiveEnergy(rate,false);
+        if(id.equals("heavenly_generator")||id.equals("infernal_generator"))e.energy.receiveEnergy(Math.min(rate,102400),false);
         else if(id.equals("thermoelectric_generator"))e.energy.receiveEnergy(Math.min(rate,e.heatDelta(level)),false);
         else {if(e.burnRemaining<=0)e.startFuel(id);if(e.burnRemaining>0&&e.energy.getEnergyStored()+e.burnEnergy<=e.energy.getMaxEnergyStored()){e.energy.receiveEnergy(e.burnEnergy,false);e.burnRemaining--;}}
         e.pushEnergy();e.setChanged();

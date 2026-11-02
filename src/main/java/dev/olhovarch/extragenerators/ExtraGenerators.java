@@ -3,6 +3,8 @@ package dev.olhovarch.extragenerators;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import org.slf4j.Logger;
@@ -14,6 +16,10 @@ public final class ExtraGenerators {
 
     public ExtraGenerators(IEventBus modBus) {
         GeneratorRegistries.register(modBus);
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            modBus.addListener(ClientRenderRegistration::registerRenderers);
+            modBus.addListener(ClientRenderRegistration::registerAdditionalModels);
+        }
         modBus.addListener(this::registerCapabilities);
         LOGGER.info("Extra Generators NeoForge port bootstrap loaded.");
     }

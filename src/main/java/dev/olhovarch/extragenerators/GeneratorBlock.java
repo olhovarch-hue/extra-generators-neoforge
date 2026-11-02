@@ -30,6 +30,6 @@ public final class GeneratorBlock extends BaseEntityBlock {
     @Override public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
     @Override public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) { return new GeneratorBlockEntity(pos, state); }
     @Override public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return level.isClientSide ? null : createTickerHelper(type, GeneratorRegistries.GENERATOR_BE.get(), GeneratorBlockEntity::serverTick);
+        return createTickerHelper(type, GeneratorRegistries.GENERATOR_BE.get(), level.isClientSide ? GeneratorBlockEntity::clientTick : GeneratorBlockEntity::serverTick);
     }
 }

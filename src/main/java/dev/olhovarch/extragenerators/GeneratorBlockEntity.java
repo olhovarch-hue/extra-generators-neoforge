@@ -136,7 +136,11 @@ public final class GeneratorBlockEntity extends BlockEntity implements MenuProvi
         }
         if(duration<=0||perTick<=0) return;
         burnRemaining=duration; burnEnergy=perTick; s.shrink(1);
-        if(s.isEmpty()&&(item.equals("water_bucket")||item.equals("lava_bucket"))) inventory.setStackInSlot(0,new ItemStack(Items.BUCKET));
+        if(s.isEmpty()&&(item.equals("water_bucket")||item.equals("lava_bucket"))) {
+            inventory.setStackInSlot(0,new ItemStack(Items.BUCKET));
+        } else if(s.isEmpty()&&(item.equals("potion")||item.equals("splash_potion")||item.equals("lingering_potion"))) {
+            inventory.setStackInSlot(0,new ItemStack(Items.GLASS_BOTTLE));
+        }
         setChanged();
     }
     private int heatDelta(Level l){

@@ -151,7 +151,7 @@ public final class GeneratorBlockEntity extends BlockEntity implements MenuProvi
         if(b==Blocks.FIRE||b==Blocks.CAMPFIRE||b==Blocks.TORCH||b==Blocks.WALL_TORCH||b==Blocks.LANTERN)return 300;
         if(b==Blocks.WATER)return 30;if(b==Blocks.ICE)return -30;if(b==Blocks.PACKED_ICE)return -40;if(b==Blocks.BLUE_ICE)return -50;return 0;
     }
-    private void pushEnergy(){if(level==null)return;for(Direction d:Direction.values()){var target=level.getCapability(Capabilities.EnergyStorage.BLOCK,worldPosition.relative(d),d.getOpposite());if(target!=null&&target.canReceive()&&energy.getEnergyStored()>0){int moved=target.receiveEnergy(Math.min(energy.getEnergyStored(),tier()[1]),false);energy.extractEnergy(moved,false);}}}
+    private void pushEnergy(){if(level==null)return;int remaining=tier()[1];for(Direction d:Direction.values()){if(remaining<=0||energy.getEnergyStored()<=0)break;var target=level.getCapability(Capabilities.EnergyStorage.BLOCK,worldPosition.relative(d),d.getOpposite());if(target!=null&&target.canReceive()){int moved=target.receiveEnergy(Math.min(Math.min(energy.getEnergyStored(),remaining),tier()[1]),false);if(moved>0){energy.extractEnergy(moved,false);remaining-=moved;}}}}
     public EnergyStorage getEnergyStorage(){return energy;}
     @Override public Component getDisplayName() {
         return Component.translatable("block.extragenerators." + id());

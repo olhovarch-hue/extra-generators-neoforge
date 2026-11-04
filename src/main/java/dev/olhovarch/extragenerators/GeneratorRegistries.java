@@ -1,6 +1,9 @@
 package dev.olhovarch.extragenerators;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.inventory.MenuType;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
+import dev.olhovarch.extragenerators.menu.GeneratorMenu;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.item.BlockItem;
@@ -18,6 +21,9 @@ public final class GeneratorRegistries {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(ExtraGenerators.MOD_ID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, ExtraGenerators.MOD_ID);
+
+    public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(Registries.MENU, ExtraGenerators.MOD_ID);
+    public static final DeferredHolder<MenuType<?>, MenuType<GeneratorMenu>> GENERATOR_MENU = MENUS.register("generator", () -> IMenuTypeExtension.create(GeneratorMenu::new));
 
     public static final Map<String, DeferredHolder<Block, GeneratorBlock>> GENERATORS = new LinkedHashMap<>();
 
@@ -60,5 +66,6 @@ public final class GeneratorRegistries {
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
         BLOCK_ENTITY_TYPES.register(modBus);
+        MENUS.register(modBus);
     }
 }

@@ -47,15 +47,16 @@ public final class GeneratorBlockEntity extends BlockEntity implements MenuProvi
     private final ContainerData menuData = new ContainerData() {
         @Override public int get(int index) {
             return switch (index) {
-                case 0 -> energy.getEnergyStored();
-                case 1 -> energy.getMaxEnergyStored();
-                case 2 -> burnRemaining;
-                case 3 -> burnEnergy;
+                case 0 -> energy.getEnergyStored() & 0xFFFF;
+                case 1 -> (energy.getEnergyStored() >>> 16) & 0xFFFF;
+                case 2 -> energy.getMaxEnergyStored() & 0xFFFF;
+                case 3 -> (energy.getMaxEnergyStored() >>> 16) & 0xFFFF;
+                case 4 -> burnRemaining;
                 default -> 0;
             };
         }
         @Override public void set(int index, int value) { }
-        @Override public int getCount() { return 4; }
+        @Override public int getCount() { return 5; }
     };
     public GeneratorBlockEntity(BlockPos pos, BlockState state){super(GeneratorRegistries.GENERATOR_BE.get(),pos,state);int[] t=tier();energy=new EnergyStorage(t[0],t[1],t[1]);}
     private String id(){return BuiltInRegistries.BLOCK.getKey(getBlockState().getBlock()).getPath();}

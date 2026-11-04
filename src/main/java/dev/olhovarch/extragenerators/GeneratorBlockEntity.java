@@ -10,6 +10,13 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import dev.olhovarch.extragenerators.menu.GeneratorMenu;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -20,7 +27,7 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 import java.util.Map;
 import java.util.Set;
 
-public final class GeneratorBlockEntity extends BlockEntity {
+public final class GeneratorBlockEntity extends BlockEntity implements MenuProvider {
     private static final int[][] TIERS={{0,0},{32000,64},{64000,128},{128000,256},{256000,512},{2048000,4096},{102400000,204800}};
     private static final Map<String,Integer> TIER=Map.ofEntries(
         Map.entry("thermoelectric_generator",1),Map.entry("burnable_generator",1),Map.entry("icy_generator",1),Map.entry("colorful_generator",1),
@@ -37,6 +44,19 @@ public final class GeneratorBlockEntity extends BlockEntity {
     private float rotationSpeed;
     private float lastRotation;
     private float rotation;
+    private final ContainerData menuData = new ContainerData() {
+        @Override public int get(int index) {
+            return switch (index) {
+                case 0 -> energy.getEnergyStored();
+                case 1 -> energy.getMaxEnergyStored();
+                case 2 -> burnRemaining;
+                case 3 -> burnEnergy;
+                default -> 0;
+            };
+        }
+        @Override public void set(int index, int value) { }
+        @Override public int getCount() { return 4; }
+    };
     public GeneratorBlockEntity(BlockPos pos, BlockState state){super(GeneratorRegistries.GENERATOR_BE.get(),pos,state);int[] t=tier();energy=new EnergyStorage(t[0],t[1],t[1]);}
     private String id(){return BuiltInRegistries.BLOCK.getKey(getBlockState().getBlock()).getPath();}
     private int[] tier(){return TIERS[TIER.getOrDefault(id(),1)];}
@@ -49,7 +69,7 @@ public final class GeneratorBlockEntity extends BlockEntity {
         } else if(id.equals("thermoelectric_generator")) {
             generated=e.energy.receiveEnergy(Math.min(rate,e.heatDelta(level)),false);
         } else {
-            if(e.burnRemaining<=0)e.startFuel(id);
+            if(e.burnRemaining<=0 && e.energy.getEnergyStored()<e.energy.getMaxEnergyStored())e.startFuel(id);
             if(e.burnRemaining>0&&e.energy.getEnergyStored()+e.burnEnergy<=e.energy.getMaxEnergyStored()){
                 generated=e.energy.receiveEnergy(e.burnEnergy,false);
                 if(generated>0)e.burnRemaining--;
@@ -132,6 +152,12 @@ public final class GeneratorBlockEntity extends BlockEntity {
     }
     private void pushEnergy(){if(level==null)return;for(Direction d:Direction.values()){var target=level.getCapability(Capabilities.EnergyStorage.BLOCK,worldPosition.relative(d),d.getOpposite());if(target!=null&&target.canReceive()&&energy.getEnergyStored()>0){int moved=target.receiveEnergy(Math.min(energy.getEnergyStored(),tier()[1]),false);energy.extractEnergy(moved,false);}}}
     public EnergyStorage getEnergyStorage(){return energy;}
+    @Override public Component getDisplayName() {
+        return Component.translatable("block.extragenerators." + id());
+    }
+    @Override public AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
+        return new GeneratorMenu(id, inventory, this, menuData);
+    }
     public ItemStackHandler getInventory(){return inventory;}
     @Override public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries){
         CompoundTag tag=super.getUpdateTag(registries);

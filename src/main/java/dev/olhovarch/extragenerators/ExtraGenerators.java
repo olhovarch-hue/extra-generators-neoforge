@@ -19,6 +19,7 @@ public final class ExtraGenerators {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             modBus.addListener(ClientRenderRegistration::registerRenderers);
             modBus.addListener(ClientRenderRegistration::registerAdditionalModels);
+            modBus.addListener(dev.olhovarch.extragenerators.client.ClientMenuRegistration::registerScreens);
         }
         modBus.addListener(this::registerCapabilities);
         LOGGER.info("Extra Generators NeoForge port bootstrap loaded.");

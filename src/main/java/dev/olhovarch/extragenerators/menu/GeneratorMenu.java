@@ -18,7 +18,7 @@ public final class GeneratorMenu extends AbstractContainerMenu {
     private final ContainerData data;
 
     public GeneratorMenu(int id, Inventory playerInventory, FriendlyByteBuf buffer) {
-        this(id, playerInventory, getGenerator(playerInventory, buffer), new net.minecraft.world.inventory.SimpleContainerData(4));
+        this(id, playerInventory, getGenerator(playerInventory, buffer), new net.minecraft.world.inventory.SimpleContainerData(5));
     }
 
     private static GeneratorBlockEntity getGenerator(Inventory inventory, FriendlyByteBuf buffer) {
@@ -32,7 +32,7 @@ public final class GeneratorMenu extends AbstractContainerMenu {
         this.generator = generator;
         this.access = ContainerLevelAccess.create(generator.getLevel(), generator.getBlockPos());
         this.data = data;
-        checkContainerDataCount(data, 4);
+        checkContainerDataCount(data, 5);
         addSlot(new SlotItemHandler(generator.getInventory(), 0, 80, 35));
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -43,9 +43,9 @@ public final class GeneratorMenu extends AbstractContainerMenu {
         addDataSlots(data);
     }
 
-    public int energy() { return data.get(0); }
-    public int capacity() { return Math.max(1, data.get(1)); }
-    public int burnRemaining() { return data.get(2); }
+    public int energy() { return ((data.get(1) & 0xFFFF) << 16) | (data.get(0) & 0xFFFF); }
+    public int capacity() { return Math.max(1, ((data.get(3) & 0xFFFF) << 16) | (data.get(2) & 0xFFFF)); }
+    public int burnRemaining() { return data.get(4); }
 
     @Override public boolean stillValid(Player player) {
         return stillValid(access, player, generator.getBlockState().getBlock());

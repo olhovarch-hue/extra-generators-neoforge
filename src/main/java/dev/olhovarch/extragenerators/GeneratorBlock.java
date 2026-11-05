@@ -2,6 +2,7 @@ package dev.olhovarch.extragenerators;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.InteractionResult;
@@ -30,7 +31,7 @@ public final class GeneratorBlock extends BaseEntityBlock {
     }
     @Override protected void createBlockStateDefinition(StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) { builder.add(FACING); }
     @Override public RenderShape getRenderShape(BlockState state) { return RenderShape.MODEL; }
-    @Override public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player) {
+    @Override public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.isClientSide) return InteractionResult.SUCCESS;
         BlockEntity blockEntity = level.getBlockEntity(pos);
         if (blockEntity instanceof GeneratorBlockEntity generator) {

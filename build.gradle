@@ -70,7 +70,16 @@ def generateGeneratorResources = tasks.register('generateGeneratorResources') {
         resources.each { relativePath, contents ->
             def target = new File(outputDir.get().asFile, relativePath.toString())
             target.parentFile.mkdirs()
-            target.setText(contents.toString(), 'UTF-8')
+            def value = contents.toString()
+            if (value.startsWith('GZIP_BASE64:')) {
+                def encoded = value.substring('GZIP_BASE64:'.length())
+                def compressed = java.util.Base64.decoder.decode(encoded)
+                def input = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(compressed))
+                target.bytes = input.bytes
+                input.close()
+            } else {
+                target.setText(value, 'UTF-8')
+            }
         }
     }
 }

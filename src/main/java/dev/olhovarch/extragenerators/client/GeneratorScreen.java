@@ -2,7 +2,6 @@ package dev.olhovarch.extragenerators.client;
 
 import dev.olhovarch.extragenerators.menu.GeneratorMenu;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -18,7 +17,7 @@ public final class GeneratorScreen extends AbstractContainerScreen<GeneratorMenu
     }
     @Override protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int x = leftPos, y = topPos;
-        graphics.blit(RenderType::guiTextured, TEXTURE, x, y, 0, 0, imageWidth, imageHeight, 256, 256);
+        graphics.blit(TEXTURE, x, y, 0, 0, imageWidth, imageHeight, 256, 256);
         int barWidth = (int)(64.0f * Math.min(1.0f, (float)menu.energy() / menu.capacity()));
         graphics.fill(x + 105, y + 35, x + 169, y + 42, 0xFF171717);
         if (barWidth > 0) graphics.fill(x + 105, y + 35, x + 105 + barWidth, y + 42, 0xFF36B86B);
